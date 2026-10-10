@@ -13,5 +13,8 @@
 /.ui-review
 
 # ⛔ 本机签名配置（含桌面绝对路径 + 密文密码），只提交 .template
-build-profile.json5
-build-profile.json5.local
+# ⚠️ 必须**锚定根路径**（前导 /）。写成裸文件名会匹配**任意层级**，
+#    连entry/ 与 实况窗demo/ 下的模块配置（apiType/targets，构建必需、
+#    不含签名信息）也一起误杀 —— 现象是「克隆后跑hvigor 报缺文件」。
+/build-profile.json5
+/build-profile.json5.local

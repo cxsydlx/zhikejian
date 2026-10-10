@@ -24,8 +24,11 @@ shuiketong-harmony/*.probe.bak
 *.keystore
 *.jks
 # 本机签名配置（含桌面绝对路径 + DevEco 密文），只提交 .template
-shuiketong-harmony/build-profile.json5
-shuiketong-harmony/build-profile.json5.local
+# ⚠️ 只挡**顶层那份**（app 级，含 signingConfigs.material）。
+#    entry/ 与 实况窗demo/ 下的同名文件是**模块配置**（apiType/targets），
+#    没有签名信息但构建必需 —— 写成 build-profile.json5 会一并误杀。
+/shuiketong-harmony/build-profile.json5
+/shuiketong-harmony/build-profile.json5.local
 
 # ---------- 词库与原始数据（可由脚本重新生成） ----------
 dictionary-web/lexicon.db
