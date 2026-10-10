@@ -1,0 +1,32 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "知课笺鸿蒙端"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "课程语音实时解答"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "知课笺"
+    },
+    {
+      "name": "perm_mic",
+      "value": "用于课堂语音实时转写"
+    },
+    {
+      "name": "perm_keep_alive",
+      "value": "保证转写后台持续运行"
+    },
+    {
+      "name": "perm_float",
+      "value": "悬浮窗展示老师的问题"
+    },
+    {
+      "name": "perm_reminder",
+      "value": "上课前一分钟提醒"
+    }
+  ]
+}

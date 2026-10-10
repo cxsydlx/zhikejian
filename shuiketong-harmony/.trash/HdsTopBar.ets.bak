@@ -1,0 +1,232 @@
+import {
+  HdsNavigationTitleBarOptions, HdsNavigationMenuItemOptions, HdsNavigationTitle,
+  HdsTitleBarContentStyle, HdsNavigationBadgeIconOptions, HdsNavigationIconOptions,
+  HdsNavigationTitleBarStyle, HdsNavigationBackgroundStyle, TitleBarStyleOptions,
+  HdsNavigationBackButtonItemOptions, HdsNavigationMenuContentOptions,
+  HdsNavigationTitleStyle, HdsNavigationIconItemStyle, TextStyleMode,
+  SystemMaterialParams, hdsMaterial, ScrollEffectType, ScrollEffectOptions,
+} from '@kit.UIDesignKit';
+import { Theme } from './Theme';
+import { Mat } from './Material';
+
+/**
+ * HDS 顶栏统一工厂。
+ *
+ * ## 为什么要有这个文件
+ * 之前 8 个页面的顶栏全是手画的 `Row { Text('‹'); Text('标题'); Text('动作') }` ——
+ * 那是「自己画」，不是用 HDS。HDS 的正规做法是页面外层用 `HdsNavigation`，
+ * 顶栏交给 `.titleBar({...})`：返回键、标题、右上菜单、材质、滚动模糊全由框架管。
+ *
+ * ## 用法
+ * ```
+ * HdsNavigation() { ...内容... }
+ *   .titleBar(HdsTopBar.of({ title: '管理课程', onBack: () => router.back(),
+ *                            menu: [{ text: '新增', onClick: () => this.openForm(null) }] }))
+ *   .mode(NavigationMode.Stack).hideNavBar(true)
+ * ```
+ *
+ * ## API 结构要点（踩过的坑，改动前务必读）
+ * · `titleBar` 参数 = `{ padding?, style?, content? }`
+ * · `style` = `{ originalStyle?, scrollEffectStyle?, systemMaterialEffect?, ... }`
+ *   —— **底色在 `style.originalStyle.backgroundStyle`**，不是 `style.backgroundStyle`（写错报 10505001）
+ *   —— **材质在 `style.systemMaterialEffect`**（`SystemMaterialParams`），这是顶栏挂沉浸光感的入口
+ * · `content.backIcon` 类型 = `HdsNavigationBackButtonItemOptions`
+ *   —— 它是 `HdsNavigationIconOptions` 的**类型别名**（SDK `@typedef { HdsNavigationIconOptions }`），
+ *     按 `HdsNavigationIconOptions` 形状直接给即可，**不包 content**
+ * · `content.menu.value[]` 每个元素类型 = `HdsNavigationBadgeIconOptions`（**要包 `content`**）
+ *   —— 两个类型不一样，搞混报「has no properties in common」
+ * · `TextStyleMode.NORMAL = 200`（胶囊文字）/ `SINGLE_CHARACTER = 201`（圆形单字）
+ *   —— **没有 `TEXT` 成员**
+ *
+ * ## 🚫 禁止使用 `content.stackBuilder`（真机崩溃，血的教训）
+ * `stackBuilder?: CustomBuilder` 自 **6.0.0(20)** 起才有。**编译期完全正常，真机运行必崩**：
+ * ```
+ * TypeError: Cannot read property observeComponentCreation2 of undefined
+ *     at barContent (XxxView.ts)
+ *     at titleBar (hdsBaseComponent.js:111)
+ * ```
+ * 根因：HDS 的 napi 桥把 `CustomBuilder` 交给框架时**丢失了 struct 的组件创建上下文**
+ * （`observeComponentCreation2` 是 ArkUI 状态管理内部函数，跨 napi 边界后拿不到）。
+ * 实测传 **struct 内 `@Builder`** 必崩；SDK 里另有 `stackBuilderComponent`(6.0.1) /
+ * `stackBuilderContent`(26.0.0) 两个替代，本工程未验证，不用。
+ *
+ * **结论：HDS 顶栏只走 `of()` 的纯声明式数据路径**（title / subTitle / menu / backIcon）。
+ * 顶栏内容表达不了 `mainTitle + menu + backIcon` 时，**不要用 HDS 顶栏** ——
+ * 把顶栏放回页面内容流自己画。
+ *
+ * ## 降级
+ * `HdsNavigation` 的 syscap 是 `SystemCapability.UIDesign.HDSComponent.Core`（HMS 侧能力），
+ * 用 `HdsTopBar.available()` 判断；材质部分走 `Mat.supported`，不支持时 `systemMaterialEffect` 不下发。
+ */
+
+/** 顶栏右上菜单项（把 HDS 的嵌套结构拍平成易用形状） */
+export interface HdsBarAction {
+  /** 按钮文字（本项目顶栏动作用文字型） */
+  text: string;
+  /** 点击回调 */
+  onClick: () => void;
+  /** 是否可用，默认 true */
+  enabled?: boolean;
+}
+
+/** 顶栏配置 */
+export interface HdsBarOptions {
+  /** 主标题 */
+  title: string;
+  /** 副标题（可空） */
+  subTitle?: string;
+  /** 返回键回调。传了才显示返回键（箭头由 HDS 自绘） */
+  onBack?: () => void;
+  /** 右上动作列表（HDS 最多展示 3 个） */
+  menu?: HdsBarAction[];
+  /** 顶栏底色（降级用；材质不生效时显示它）。默认取主题色 */
+  bgColor?: string;
+  /** 标题文字色。默认白（跟主题色底搭配） */
+  titleColor?: string;
+  /** 副标题颜色。默认浅米色 */
+  subTitleColor?: string;
+}
+
+export class HdsTopBar {
+
+  /** 设备是否具备 HDS 组件能力（`SystemCapability.UIDesign.HDSComponent.Core`） */
+  private static cached: boolean | undefined = undefined;
+
+  /**
+   * 探测 HDS 能力。`canIUse` 对 HMS 侧 syscap 有效。
+   * 本工程已用 `HdsTabs`（同属 UIDesignKit），实际设备上基本都能过；
+   * 保留判断是为了「理论上没有该能力的设备」不至于崩。
+   */
+  static available(): boolean {
+    if (HdsTopBar.cached !== undefined) {
+      return HdsTopBar.cached;
+    }
+    let ok = false;
+    try {
+      ok = canIUse('SystemCapability.UIDesign.HDSComponent.Core');
+    } catch (e) {
+      ok = false;
+    }
+    HdsTopBar.cached = ok;
+    return ok;
+  }
+
+  /**
+   * 生成 `HdsNavigation.titleBar()` 的参数。
+   *
+   * 结构映射：
+   *   title/subTitle → content.title.mainTitle / subTitle
+   *   onBack         → content.backIcon（HdsNavigationIconOptions）
+   *   menu[]         → content.menu.value[]（HdsNavigationBadgeIconOptions，各含 content）
+   *   颜色           → style.originalStyle.contentStyle
+   *   底色           → style.originalStyle.backgroundStyle.backgroundColor
+   *   材质           → style.systemMaterialEffect（沉浸光感）
+   */
+  static of(o: HdsBarOptions): HdsNavigationTitleBarOptions {
+    const bg: string = o.bgColor !== undefined ? o.bgColor : Theme.themeColor();
+    const titleColor: string = o.titleColor !== undefined ? o.titleColor : '#FFFFFF';
+    const subColor: string = o.subTitleColor !== undefined ? o.subTitleColor : '#FFEDD5';
+
+    // ---- 内容样式 ----
+    const titleStyle: HdsNavigationTitleStyle = {
+      mainTitleColor: titleColor,
+      subTitleColor: subColor,
+    };
+    const iconItemStyle: HdsNavigationIconItemStyle = {
+      textColor: titleColor,
+      iconColor: titleColor,
+    };
+    const contentStyle: HdsTitleBarContentStyle = {
+      titleStyle: titleStyle,
+      menuStyle: iconItemStyle,
+      backIconStyle: iconItemStyle,
+    };
+
+    // ---- 背景样式 ----
+    const bgStyle: HdsNavigationBackgroundStyle = { backgroundColor: bg };
+
+    // ---- 原始样式（滚动前的状态）----
+    const originStyle: HdsNavigationTitleBarStyle = {
+      backgroundStyle: bgStyle,
+      contentStyle: contentStyle,
+    };
+
+    // ---- 滚动后样式：模糊生效后的状态 ----
+    // 渐变模糊就是「originalStyle → scrollEffectStyle」的过渡。
+    // 只给 originalStyle 的话滚动没有渐变终点，看起来就是「一直一个样」。
+    const scrollStyle: HdsNavigationTitleBarStyle = {
+      backgroundStyle: bgStyle,
+      contentStyle: contentStyle,
+    };
+
+    const styleOpts: TitleBarStyleOptions = {
+      originalStyle: originStyle,
+      scrollEffectStyle: scrollStyle,
+    };
+
+    // ---- 滚动渐变模糊：沉浸光感的「渐变模糊」特性 ----
+    // IMMERSIVE_GRADIENT_BLUR（6.1.0(23)）：标题栏从**完全透明**渐变到模糊，过渡更长更自然。
+    // 必须与 systemMaterialEffect 同时给，才是完整的沉浸光感（文档明确要求）。
+    const scrollOpts: ScrollEffectOptions = {
+      enableScrollEffect: true,
+      scrollEffectType: ScrollEffectType.IMMERSIVE_GRADIENT_BLUR,
+    };
+    styleOpts.scrollEffectOpts = scrollOpts;
+
+    // ---- 沉浸光感材质 ----
+    if (Mat.supported) {
+      const matParams: SystemMaterialParams = {
+        materialType: hdsMaterial.MaterialType.ADAPTIVE,
+        materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE,
+      };
+      styleOpts.systemMaterialEffect = matParams;
+    }
+
+    // ---- 标题 ----
+    const title: HdsNavigationTitle = { mainTitle: o.title };
+    if (o.subTitle !== undefined && o.subTitle.length > 0) {
+      title.subTitle = o.subTitle;
+    }
+
+    const opts: HdsNavigationTitleBarOptions = {
+      style: styleOpts,
+      content: { title: title },
+    };
+
+    // ---- 返回键（直接是 HdsNavigationIconOptions）----
+    if (o.onBack !== undefined) {
+      const back: HdsNavigationBackButtonItemOptions = {
+        action: () => {
+          if (o.onBack !== undefined) {
+            o.onBack();
+          }
+        },
+      };
+      opts.content!.backIcon = back;
+    }
+
+    // ---- 右上菜单（每个元素是 BadgeIconOptions，内含 content）----
+    if (o.menu !== undefined && o.menu.length > 0) {
+      const arr: HdsNavigationMenuItemOptions[] = [];
+      for (let i = 0; i < o.menu.length; i++) {
+        const a = o.menu[i];
+        const c: HdsNavigationIconOptions = {
+          label: a.text,
+          type: TextStyleMode.NORMAL,
+          action: () => {
+            a.onClick();
+          },
+        };
+        if (a.enabled !== undefined) {
+          c.isEnabled = a.enabled;
+        }
+        const item: HdsNavigationBadgeIconOptions = { content: c };
+        arr.push(item);
+      }
+      const menuContent: HdsNavigationMenuContentOptions = { value: arr, maxCount: 3 };
+      opts.content!.menu = menuContent;
+    }
+
+    return opts;
+  }
+}

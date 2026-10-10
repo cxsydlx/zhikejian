@@ -1,0 +1,5 @@
+- `3be1b9e` 2026-10-10 — chore: deploy.sh 的 Python 路径改为 WS_PYTHON 环境变量
+- `670b912` 2026-10-10 — fix(git): .gitignore 不支持行尾注释，导致 63MB 词库 CSV 被误提交
+- `ada9562` 2026-10-10 — fix(dictionary): 中文释义的字面 \n 导致整条挤成一行 + 补双语例句
+- `c7f6dda` 2026-10-10 — feat(dictionary): 补中文释义（ECDICT）—— 从「英语词典」变成「英汉词典」
+- `f82f434` 2026-10-10 — feat(dictionary): 词典站上线 —— dictionary.xsheep.cn

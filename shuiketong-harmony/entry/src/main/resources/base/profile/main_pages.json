@@ -1,0 +1,11 @@
+{
+  "src": [
+    "pages/Main",
+    "pages/ImportSchedule",
+    "pages/ThemeSettings",
+    "pages/CourseEdit",
+    "pages/Settings",
+    "pages/QuestionDetail",
+    "pages/TranscriptRecords"
+  ]
+}

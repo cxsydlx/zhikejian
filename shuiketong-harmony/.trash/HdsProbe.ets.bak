@@ -1,0 +1,60 @@
+import { HdsNavigation, HdsNavigationTitleBarOptions } from '@kit.UIDesignKit';
+
+/**
+ * 临时诊断页（用完即删）。
+ *
+ * 结论（2026-09-27 真机实测）：
+ *   · 用**最小 titleBar**（只有 mainTitle，无 style / 无 material / 无 scrollEffect）
+ *     → 内部 Column 依然完全不渲染（屏幕全白）
+ *   · ∴ 与 titleBar 参数无关，是 **HdsNavigation 组件本身在本机不可用**
+ *
+ * 本版把诊断信息放在 HdsNavigation **外面**（Stack 顶层），确保能看见。
+ */
+@Entry
+@Component
+struct HdsProbe {
+  @State hdsOk: string = '?';
+
+  aboutToAppear(): void {
+    try {
+      this.hdsOk = canIUse('SystemCapability.UIDesign.HDSComponent.Core') ? 'TRUE' : 'FALSE';
+    } catch (e) {
+      this.hdsOk = 'THROW';
+    }
+  }
+
+  build() {
+    Stack() {
+      // ---- 诊断信息（不被 HdsNavigation 包裹，保证可见） ----
+      Column({ space: 14 }) {
+        Text('canIUse(HDSComponent.Core) = ' + this.hdsOk)
+          .fontSize(26).fontColor('#FFFFFF').backgroundColor('#C0392B')
+          .padding(14).width('100%')
+        Text('下面这一块是 HdsNavigation 内部内容 —— 若看不见它，说明组件不渲染子树')
+          .fontSize(20).fontColor('#333333').padding(14).width('100%')
+
+        // ---- 被测试对象：HdsNavigation + 最小 titleBar ----
+        HdsNavigation() {
+          Text('★ 我来自 HdsNavigation 内部 ★')
+            .fontSize(26)
+            .fontColor('#FFFFFF')
+            .backgroundColor('#16A34A')
+            .padding(20)
+            .width('100%')
+        }
+        .titleBar({ content: { title: { mainTitle: '最小顶栏' } } } as HdsNavigationTitleBarOptions)
+        .mode(NavigationMode.Stack)
+        .hideNavBar(true)
+        .hideTitleBar(false)
+        .width('100%')
+        .height(240)
+      }
+      .width('100%')
+      .height('100%')
+      .padding(24)
+      .backgroundColor('#FFFFFF')
+    }
+    .width('100%')
+    .height('100%')
+  }
+}

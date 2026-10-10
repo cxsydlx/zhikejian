@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>知课笺 · 交互动效预览</title>
+<style>
+  :root{
+    --bg:#FAF8F6;
+    --card:#FFFFFF;
+    --line:#F0EBE7;
+    --ink:#1C1917;
+    --ink2:#78716C;
+    --ink3:#A8A29E;
+    --brand:#C0492F;
+    --brand-soft:#FCEBE6;
+    --blue:#0A59F7;
+    --blue-soft:#DBE5FD;
+    --track:#F1F3F5;
+    --warm-block:#F3D9CF;
+    --cool-block:#E8E2DC;
+
+    /* 与工程 common/DesignToken.ets 的 Motion 类保持一致 */
+    --ease-standard:cubic-bezier(0.4,0,0.2,1);   /* FastOutSlowIn */
+    --ease-enter:cubic-bezier(0,0,0.2,1);        /* EaseOut */
+    --ease-exit:cubic-bezier(0.4,0,1,1);         /* EaseIn */
+    --ease-inout:cubic-bezier(0.4,0,0.6,1);      /* EaseInOut */
+
+    --d-touch:150ms;
+    --d-list:300ms;
+    --d-page:350ms;
+    --d-panel:400ms;
+    --d-layout:450ms;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Source Han Sans SC",sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding:56px 40px 96px;
+  }
+
+  .wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:28px;}
+
+  /* ---------- 页头 ---------- */
+  .page-head{display:flex;flex-direction:column;gap:14px;}
+  .page-head h1{
+    margin:0;font-size:38px;line-height:48px;font-weight:700;letter-spacing:-0.4px;
+  }
+  .page-head .sub{
+    margin:0;font-size:15px;line-height:23px;color:var(--ink2);max-width:820px;
+  }
+  .meta-row{display:flex;flex-wrap:wrap;gap:10px;padding-top:6px;}
+  .meta-chip{
+    display:inline-flex;align-items:center;gap:7px;
+    background:var(--card);border:1px solid var(--line);border-radius:999px;
+    padding:7px 14px;font-size:12.5px;color:var(--ink2);
+  }
+  .meta-chip b{color:var(--brand);font-weight:600;}
+  .dot-live{
+    width:7px;height:7px;border-radius:50%;background:#3FA26A;
+    animation:livePulse 1800ms ease-in-out infinite;
+  }
+  @keyframes livePulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.35;transform:scale(.82);}}
+
+  /* ---------- 卡片 ---------- */
+  .card{
+    display:flex;gap:32px;
+    background:var(--card);
+    border-radius:16px;
+    padding:32px;
+    border:1px solid var(--line);
+  }
+  .card .info{flex:0 0 336px;display:flex;flex-direction:column;gap:15px;}
+  .card .head{display:flex;align-items:center;gap:12px;}
+  .no{
+    flex:0 0 36px;width:36px;height:36px;border-radius:10px;
+    background:var(--brand-soft);color:var(--brand);
+    display:grid;place-items:center;font-size:15px;font-weight:700;
+  }
+  .card h2{margin:0;font-size:19px;line-height:26px;font-weight:600;}
+  .card .desc{margin:0;font-size:13px;line-height:21px;color:var(--ink2);}
+  .hr{height:1px;background:var(--line);}
+  .params{display:flex;flex-direction:column;gap:9px;}
+  .prow{display:flex;justify-content:space-between;align-items:baseline;gap:12px;}
+  .prow .k{font-size:13px;color:var(--ink3);}
+  .prow .v{font-size:13px;font-weight:500;text-align:right;}
+  .prow .v.hi{color:var(--brand);}
+
+  /* ---------- 舞台 ---------- */
+  .stage{
+    flex:1;min-height:250px;
+    background:var(--bg);
+    border:1px solid var(--line);
+    border-radius:14px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:22px;padding:28px;position:relative;overflow:hidden;
+  }
+  .stage-cap{
+    font-size:12px;line-height:17px;color:var(--ink3);text-align:center;
+  }
+  .replay{
+    position:absolute;top:12px;right:12px;
+    display:inline-flex;align-items:center;gap:5px;
+    background:var(--card);border:1px solid var(--line);border-radius:999px;
+    padding:5px 11px;font-size:11.5px;color:var(--ink2);
+    cursor:pointer;transition:transform var(--d-touch) var(--ease-standard),background var(--d-touch) linear;
+    font-family:inherit;
+  }
+  .replay:hover{background:var(--track);}
+  .replay:active{transform:scale(0.94);}
+
+  /* ============ 01 按压反馈 ============ */
+  .demo-btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    height:46px;padding:0 26px;border:0;border-radius:12px;
+    background:var(--blue);color:#fff;font-size:14.5px;font-weight:500;
+    font-family:inherit;cursor:pointer;
+    transition:transform var(--d-touch) var(--ease-standard),background var(--d-touch) linear;
+  }
+  .demo-btn.is-pressed{transform:scale(0.96);}
+
+  /* ============ 02 开始听课按钮 ============ */
+  .listen-btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:9px;
+    height:46px;padding:0 26px;border-radius:12px;
+    background:var(--blue);color:#fff;
+    font-size:14.5px;font-weight:500;cursor:pointer;user-select:none;
+    transition:background var(--d-touch) var(--ease-standard);
+  }
+  .listen-btn.is-rec{background:var(--brand);}
+  .ico-stack{position:relative;width:16px;height:16px;flex:0 0 16px;}
+  .ico-stack svg{position:absolute;inset:0;transition:opacity var(--d-touch) linear;}
+  .ico-stack .i-stop{opacity:0;}
+  .listen-btn.is-rec .i-mic{opacity:0;}
+  .listen-btn.is-rec .i-stop{opacity:1;}
+  .lbl{position:relative;display:inline-block;}
+  .lbl span{display:block;transition:opacity var(--d-touch) linear;}
+  .lbl .b{position:absolute;inset:0;opacity:0;}
+  .listen-btn.is-rec .lbl .a{opacity:0;}
+  .listen-btn.is-rec .lbl .b{opacity:1;}
+
+  /* ============ 03 呼吸点 ============ */
+  .breathe-row{display:flex;align-items:center;gap:14px;}
+  .breathe{position:relative;width:26px;height:26px;display:grid;place-items:center;flex:0 0 26px;}
+  .breathe .halo{
+    position:absolute;width:16px;height:16px;border-radius:50%;
+    background:var(--blue);
+    animation:breatheHalo 1200ms var(--ease-inout) infinite;
+  }
+  .breathe .bdot{
+    position:relative;width:16px;height:16px;border-radius:50%;background:var(--blue);
+    animation:breatheDot 1200ms var(--ease-inout) infinite;
+  }
+  @keyframes breatheDot{0%,100%{transform:scale(1);}50%{transform:scale(1.25);}}
+  @keyframes breatheHalo{0%,100%{transform:scale(1);opacity:.20;}50%{transform:scale(2.25);opacity:.05;}}
+  .breathe-row .txt{font-size:14px;font-weight:500;}
+  .breathe-row .txt small{color:var(--ink3);font-weight:400;}
+
+  /* ============ 04 转写入场 ============ */
+  .tr-view{
+    width:100%;max-width:420px;
+    display:flex;flex-direction:column;gap:9px;
+  }
+  .tr-item{
+    background:var(--card);border:1px solid var(--line);border-radius:9px;
+    padding:11px 14px;font-size:13px;line-height:19px;color:var(--ink);
+  }
+  .tr-item.enter{animation:floatIn var(--d-list) var(--ease-enter) both;}
+  @keyframes floatIn{
+    from{opacity:0;transform:translateY(12px);}
+    to{opacity:1;transform:translateY(0);}
+  }
+
+  /* ============ 05 选择器 ============ */
+  .seg{display:inline-flex;gap:6px;background:transparent;padding:0;border-radius:12px;}
+  .seg .cell{
+    width:56px;height:38px;border-radius:9px;
+    display:grid;place-items:center;
+    font-size:13.5px;font-weight:500;
+    background:var(--track);color:var(--ink2);
+    transition:background var(--d-touch) var(--ease-standard),color var(--d-touch) linear;
+    cursor:pointer;user-select:none;
+  }
+  .seg .cell.on{background:var(--blue);color:#fff;}
+
+  /* ============ 06 展开收起 ============ */
+  .collapse{
+    width:100%;max-width:400px;
+    background:var(--card);border:1px solid var(--line);border-radius:11px;
+    overflow:hidden;
+  }
+  .collapse .chead{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:15px 16px;cursor:pointer;user-select:none;
+  }
+  .collapse .chead span{font-size:14px;font-weight:500;}
+  .collapse .chev{transition:transform var(--d-panel) var(--ease-standard);color:var(--ink3);}
+  .collapse.open .chev{transform:rotate(180deg);}
+  .collapse .cbody{
+    max-height:0;overflow:hidden;
+    transition:max-height var(--d-panel) var(--ease-standard);
+  }
+  .collapse.open .cbody{max-height:190px;}
+  .collapse .cbody .row{
+    padding:0 16px 13px;font-size:13px;line-height:19px;color:var(--ink2);
+  }
+  .collapse .cbody .row:last-child{padding-bottom:17px;}
+
+  /* ============ 07 周次切换 ============ */
+  .week-view{
+    width:100%;max-width:430px;overflow:hidden;border-radius:10px;
+  }
+  .week-track{
+    display:flex;width:200%;
+    transition:transform var(--d-page) var(--ease-inout);
+  }
+  .week-pane{width:50%;flex:0 0 50%;display:flex;flex-direction:column;gap:6px;padding:2px;}
+  .week-pane .row{display:flex;gap:6px;}
+  .wk{
+    flex:1;height:40px;border-radius:6px;background:var(--cool-block);
+  }
+  .wk.warm{background:var(--warm-block);}
+  .week-cap{
+    font-size:12px;color:var(--ink3);text-align:center;
+    transition:opacity var(--d-page) linear;
+  }
+
+  /* ============ 08 视图切换 ============ */
+  .view-box{position:relative;width:100%;max-width:430px;height:190px;}
+  .view-layer{
+    position:absolute;inset:0;
+    display:flex;flex-direction:column;gap:8px;
+    transition:opacity var(--d-layout) var(--ease-standard),transform var(--d-layout) var(--ease-standard);
+  }
+  .view-layer.hide{opacity:0;transform:scale(0.98);pointer-events:none;}
+  .v-grid{display:flex;flex-direction:column;gap:7px;justify-content:center;}
+  .v-grid .row{display:flex;gap:7px;}
+  .vcell{flex:1;height:52px;border-radius:9px;background:var(--cool-block);}
+  .vcell.warm{background:var(--warm-block);}
+  .v-list{justify-content:center;}
+  .vrow{
+    display:flex;align-items:center;gap:11px;
+    background:var(--card);border:1px solid var(--line);border-radius:9px;
+    padding:11px 13px;
+  }
+  .vrow .bar{width:3px;height:22px;border-radius:2px;flex:0 0 3px;}
+  .vrow .t{font-size:13px;line-height:19px;}
+
+  /* ---------- 页脚 ---------- */
+  .page-foot{
+    margin-top:8px;padding:24px;border-top:1px solid var(--line);
+    display:flex;flex-direction:column;gap:10px;
+  }
+  .page-foot p{margin:0;font-size:13px;line-height:21px;color:var(--ink3);}
+  .page-foot code{
+    background:var(--track);border-radius:4px;padding:1.5px 6px;
+    font-size:12.5px;color:var(--ink2);
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+
+  @media (max-width:960px){
+    body{padding:32px 18px 64px;}
+    .card{flex-direction:column;gap:22px;padding:22px;}
+    .card .info{flex:1 1 auto;width:100%;}
+    .stage{padding:20px;}
+    .page-head h1{font-size:28px;line-height:36px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="page-head">
+    <h1>知课笺 · 交互动效预览</h1>
+    <p class="sub">
+      8 条元素级动效的<b>真实运行</b>演示。参数与工程 <code style="font-family:ui-monospace,Menlo,monospace;background:#F1F3F5;border-radius:4px;padding:1px 6px;font-size:12.5px;color:#78716C;">common/DesignToken.ets</code> 的 <b>Motion</b> 类一一对应，
+      时长与曲线均取自 ArkUI 内置枚举，可直接照此落地。
+    </p>
+    <div class="meta-row">
+      <span class="meta-chip"><i class="dot-live"></i>下方动画均在自动循环播放</span>
+      <span class="meta-chip">时长基准 <b>150 / 300 / 350 / 400 / 450 ms</b></span>
+      <span class="meta-chip">曲线基准 <b>FastOutSlowIn</b> · EaseOut · EaseIn · EaseInOut</span>
+      <span class="meta-chip">目标平台 <b>HarmonyOS · ArkTS</b></span>
+    </div>
+  </div>
+
+  <!-- ================= 01 ================= -->
+  <section class="card">
+    <div class="info">
+      <div class="head">
+        <div class="no">01</div>
+        <h2>全局按压反馈</h2>
+      </div>
+      <p class="desc">按下任意可点元素时该元素轻微内收，松开后回弹，给出「已接住」的触觉暗示。</p>
+      <div class="hr"></div>
+      <div class="params">
+        <div class="prow"><span class="k">触发</span><span class="v">按下 / 抬起</span></div>
+        <div class="prow"><span class="k">变化</span><span class="v hi">scale 1 → 0.96</span></div>
+        <div class="prow"><span class="k">时长</span><span class="v hi">150 ms</span></div>
+        <div class="prow"><span class="k">曲线</span><span class="v">FastOutSlowIn</span></div>
+      </div>
+    </div>
+    <div class="stage">
+      <button class="replay" data-replay="1">重播</button>
+      <button class="demo-btn" id="pressBtn">开始听课</button>
+      <div class="stage-cap">真实鼠标按下也能触发 —— 把指针压上去试试</div>
+    </div>
+  </section>
+
+  <!-- ================= 02 ================= -->
+  <section class="card">
+    <div class="info">
+      <div class="head">
+        <div class="no">02</div>
+        <h2>开始听课按钮</h2>
+      </div>
+      <p class="desc">底色与图标同步切换，让「录音中」这个状态变化一眼可见，不靠读文字。</p>
+      <div class="hr"></div>
+      <div class="params">
+        <div class="prow"><span class="k">触发</span><span class="v">点击开始 / 停止</span></div>
+        <div class="prow"><span class="k">变化</span><span class="v hi">#0A59F7 → #C0492F</span></div>
+        <div class="prow"><span class="k">图标</span><span class="v hi">麦克风 → 方块</span></div>
+        <div class="prow"><span class="k">时长 / 曲线</span><span class="v">200 ms · FastOutSlowIn</span></div>
+      </div>
+    </div>
+    <div class="stage">
+      <button class="replay" data-replay="2">重播</button>
+      <div class="listen-btn" id="listenBtn">
+        <span class="ico-stack">
+          <svg class="i-mic" viewBox="0 0 16 16" width="16" height="16" fill="none">
+            <rect x="6" y="1.5" width="4" height="7.5" rx="2" fill="currentColor"/>
+            <path d="M3.5 7.5a4.5 4.5 0 0 0 9 0" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+            <path d="M8 12v2.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          </svg>
+          <svg class="i-stop" viewBox="0 0 16 16" width="16" height="16" fill="none">
+            <rect x="3.5" y="3.5" width="9" height="9" rx="2" fill="currentColor"/>
+          </svg>
+        </span>
+        <span class="lbl">
+          <span class="a">开始听课</span>
+          <span class="b">停止听课</span>
+        </span>
+      </div>
+      <div class="stage-cap">点击按钮可手动切换，松手后自动继续循环</div>
+    </div>
+  </section>
+
+  <!-- ================= 03 ================= -->
+  <section class="card">
+    <div class="info">
+      <div class="head">
+        <div class="no">03</div>
+        <h2>录音状态呼吸点</h2>
+      </div>
+      <p class="desc">安静的页面里需要一个「活着」的信号。呼吸比闪烁更不打扰，也不会把视线带走。</p>
+      <div class="hr"></div>
+      <div class="params">
+        <div class="prow"><span class="k">触发</span><span class="v">录音进行中无限循环</span></div>
+        <div class="prow"><span class="k">变化</span><span class="v hi">scale 1 ↔ 1.25</span></div>
+        <div class="prow"><span class="k">光晕</span><span class="v hi">同步 1 → 2.25 倍</span></div>
+        <div class="prow"><span class="k">时长 / 曲线</span><span class="v">1200 ms · EaseInOut</span></div>
+      </div>
+    </div>
+    <div class="stage">
+      <div class="breathe-row">
+        <div class="breathe">
+          <div class="halo"></div>
+          <div class="bdot"></div>
+        </div>
+        <div class="txt">正在听课 <small>· 00:12</small></div>
+      </div>
+      <div class="stage-cap">1200ms 一个来回，与真实语音的呼吸节奏接近</div>
+    </div>
+  </section>
+
+  <!-- ================= 04 ================= -->
+  <section class="card">
+    <div class="info">
+      <div class="head">
+        <div class="no">04</div>
+        <h2>转写条目入场</h2>
+      </div>
+      <p class="desc">新识别结果从下往上浮入。开场不能太长，否则连续说话时文字会追不上语音。</p>
+      <div class="hr"></div>
+      <div class="params">
+        <div class="prow"><span class="k">触发</span><span class="v">新转写结果到达</span></div>
+        <div class="prow"><span class="k">位移</span><span class="v hi">+12 vp → 0</span></div>
+        <div class="prow"><span class="k">不透明度</span><span class="v hi">0 → 1</span></div>
+        <div class="prow"><span class="k">时长 / 曲线</span><span class="v">300 ms · EaseOut</span></div>
+      </div>
+    </div>
+    <div class="stage">
+      <button class="replay" data-replay="4">重播</button>
+      <div class="tr-view" id="trView"></div>
+      <div class="stage-cap">只保留最近 3 条，超出后最早的自动退出</div>
+    </div>
+  </section>
+
+  <!-- ================= 05 ================= -->
+  <section class="card">
+    <div class="info">
+      <div class="head">
+        <div class="no">05</div>
+        <h2>选择器选中切换</h2>
+      </div>
+      <p class="desc">设置页最频繁的交互。选中项要一眼可辨，但<b>不要用位移</b> —— 位移会让整行跟着跳。</p>
+      <div class="hr"></div>
+      <div class="params">
+        <div class="prow"><span class="k">触发</span><span class="v">点击分段选择器</span></div>
+        <div class="prow"><span class="k">变化</span><span class="v hi">底色 + 字色过渡</span></div>
+        <div class="prow"><span class="k">位移</span><span class="v hi">无（避免行跳动）</span></div>
+        <div class="prow"><span class="k">时长 / 曲线</span><span class="v">150 ms · FastOutSlowIn</span></div>
+      </div>
+    </div>
+    <div class="stage">
+      <button class="replay" data-replay="5">重播</button>
+      <div class="seg" id="seg">
+        <div class="cell on">一</div>
+        <div class="cell">二</div>
+        <div class="cell">三</div>
+        <div class="cell">四</div>
+        <div class="cell">五</div>
+      </div>
+      <div class="stage-cap">也可直接点击任意格切换</div>
+    </div>
+  </section>
+
+  <!-- ================= 06 ================= -->
+  <section class="card">
+    <div class="info">
+      <div class="head">
+        <div class="no">06</div>
+        <h2>分区展开收起</h2>
+      </div>
+      <p class="desc">高度动画必须配合同步的箭头旋转，否则用户既不知道是开还是关，也不知道这里能点。</p>
+      <div class="hr"></div>
+      <div class="params">
+        <div class="prow"><span class="k">触发</span><span class="v">点击分区标题行</span></div>
+        <div class="prow"><span class="k">高度</span><span class="v hi">0 ↔ 自适应</span></div>
+        <div class="prow"><span class="k">箭头</span><span class="v hi">rotate 0° → 180°</span></div>
+        <div class="prow"><span class="k">时长 / 曲线</span><span class="v">400 ms · FastOutSlowIn</span></div>
+      </div>
+    </div>
+    <div class="stage">
+      <button class="replay" data-replay="6">重播</button>
+      <div class="collapse" id="collapse">
+        <div class="chead" id="collapseHead">
+          <span>语音识别</span>
+          <svg class="chev" viewBox="0 0 16 16" width="14" height="14" fill="none">
+            <path d="M4 6.5L8 10.5L12 6.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="cbody">
+          <div class="row">端侧引擎 — 鸿蒙端侧识别，零流量零加载</div>
+          <div class="row">私有云 WSS — 流式返回，实时出字</div>
+          <div class="row">大模型 API — 按停顿切段，兼容任意厂商</div>
+        </div>
+      </div>
+      <div class="stage-cap">点击标题行可手动开合</div>
+    </div>
+  </section>
+
+  <!-- ================= 07 ================= -->
+  <section class="card">
+    <div class="info">
+      <div class="head">
+        <div class="no">07</div>
+        <h2>周次横向切换</h2>
+      </div>
+      <p class="desc">让「周」这个概念有方向感。整体位移比逐格刷新更容易让人理解刚才发生了什么。</p>
+      <div class="hr"></div>
+      <div class="params">
+        <div class="prow"><span class="k">触发</span><span class="v">左右滑动课表</span></div>
+        <div class="prow"><span class="k">位移</span><span class="v hi">± 全宽（跟手）</span></div>
+        <div class="prow"><span class="k">不透明度</span><span class="v hi">0.6 → 1</span></div>
+        <div class="prow"><span class="k">时长 / 曲线</span><span class="v">350 ms · EaseInOut</span></div>
+      </div>
+    </div>
+    <div class="stage">
+      <button class="replay" data-replay="7">重播</button>
+      <div class="week-view">
+        <div class="week-track" id="weekTrack">
+          <div class="week-pane">
+            <div class="row"><div class="wk warm"></div><div class="wk"></div><div class="wk"></div><div class="wk warm"></div><div class="wk"></div></div>
+            <div class="row"><div class="wk"></div><div class="wk warm"></div><div class="wk"></div><div class="wk"></div><div class="wk"></div></div>
+            <div class="row"><div class="wk"></div><div class="wk"></div><div class="wk warm"></div><div class="wk"></div><div class="wk"></div></div>
+          </div>
+          <div class="week-pane">
+            <div class="row"><div class="wk warm"></div><div class="wk"></div><div class="wk"></div><div class="wk"></div><div class="wk warm"></div></div>
+            <div class="row"><div class="wk"></div><div class="wk warm"></div><div class="wk"></div><div class="wk"></div><div class="wk"></div></div>
+            <div class="row"><div class="wk"></div><div class="wk"></div><div class="wk warm"></div><div class="wk"></div><div class="wk"></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="stage-cap">第 8 周 ⇄ 第 9 周，整轨平移而非重绘</div>
+    </div>
+  </section>
+
+  <!-- ================= 08 ================= -->
+  <section class="card">
+    <div class="info">
+      <div class="head">
+        <div class="no">08</div>
+        <h2>视图布局切换</h2>
+      </div>
+      <p class="desc">课表与列表是同一份数据的两种视角，用交叉淡化表达「换了个看法」而不是「翻页了」。</p>
+      <div class="hr"></div>
+      <div class="params">
+        <div class="prow"><span class="k">触发</span><span class="v">课表 / 列表互切</span></div>
+        <div class="prow"><span class="k">不透明度</span><span class="v hi">交叉淡化</span></div>
+        <div class="prow"><span class="k">缩放</span><span class="v hi">0.98 → 1</span></div>
+        <div class="prow"><span class="k">时长 / 曲线</span><span class="v">450 ms · FastOutSlowIn</span></div>
+      </div>
+    </div>
+    <div class="stage">
+      <button class="replay" data-replay="8">重播</button>
+      <div class="view-box">
+        <div class="view-layer v-grid" id="layerGrid">
+          <div class="row"><div class="vcell warm"></div><div class="vcell"></div><div class="vcell warm"></div></div>
+          <div class="row"><div class="vcell"></div><div class="vcell warm"></div><div class="vcell"></div></div>
+          <div class="row"><div class="vcell warm"></div><div class="vcell"></div><div class="vcell"></div></div>
+        </div>
+        <div class="view-layer v-list hide" id="layerList">
+          <div class="vrow"><div class="bar" style="background:#C0492F"></div><div class="t">理论力学 A · 二教 207</div></div>
+          <div class="vrow"><div class="bar" style="background:#7A8CA3"></div><div class="t">高等数学 B · 三教 105</div></div>
+          <div class="vrow"><div class="bar" style="background:#5E8C6A"></div><div class="t">大学物理 · 实验楼 302</div></div>
+        </div>
+      </div>
+      <div class="stage-cap">两层叠加交叉淡化，位移为 0，只有轻微缩放</div>
+    </div>
+  </section>
+
+  <div class="page-foot">
+    <p>以上曲线全部为 ArkUI 内置 <code>Curve</code> 枚举成员；需要弹性时改用 <code>@ohos.curves</code> 的 <code>springCurve()</code> / <code>springMotion()</code>。</p>
+    <p>时长基准与该工程 <code>Motion</code> 类一致：触摸反馈 150ms / 列表增删 300ms / 页面转场 350ms / 面板展开 400ms / 布局切换 450ms。</p>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---------- 01 按压反馈 ---------- */
+  var pressBtn = document.getElementById('pressBtn');
+  var pressTimer = null;
+  function pressCycle(){
+    if(reduce) return;
+    pressBtn.classList.add('is-pressed');
+    setTimeout(function(){ pressBtn.classList.remove('is-pressed'); }, 190);
+  }
+  function startPress(){
+    clearInterval(pressTimer);
+    pressTimer = setInterval(pressCycle, 2200);
+  }
+  startPress();
+
+  /* ---------- 02 开始听课按钮 ---------- */
+  var listenBtn = document.getElementById('listenBtn');
+  var listenTimer = null, listenHold = false;
+  function setRec(on){ listenBtn.classList.toggle('is-rec', on); }
+  function startListen(){
+    clearInterval(listenTimer);
+    listenTimer = setInterval(function(){
+      if(listenHold) return;
+      setRec(!listenBtn.classList.contains('is-rec'));
+    }, 2600);
+  }
+  listenBtn.addEventListener('click', function(){
+    listenHold = true;
+    setRec(!listenBtn.classList.contains('is-rec'));
+    setTimeout(function(){ listenHold = false; }, 4200);
+  });
+  startListen();
+
+  /* ---------- 04 转写条目入场 ---------- */
+  var trView = document.getElementById('trView');
+  var LINES = [
+    '今天讲约束与自由度的关系',
+    '静力学公理有三条要记牢',
+    '受力分析要先画分离体图',
+    '平衡方程独立个数等于未知量个数',
+    '摩擦力方向与相对滑动趋势相反',
+    '下周交作业，做课后第三题和第五题'
+  ];
+  var lineIdx = 0;
+  function pushLine(){
+    var d = document.createElement('div');
+    d.className = 'tr-item enter';
+    d.textContent = LINES[lineIdx % LINES.length];
+    lineIdx++;
+    trView.appendChild(d);
+    while(trView.children.length > 3){
+      trView.removeChild(trView.firstChild);
+    }
+  }
+  var trTimer = null;
+  function startTr(){
+    clearInterval(trTimer);
+    trView.innerHTML = '';
+    lineIdx = 0;
+    pushLine();
+    setTimeout(pushLine, 420);
+    trTimer = setInterval(pushLine, 2600);
+  }
+  startTr();
+
+  /* ---------- 05 选择器 ---------- */
+  var seg = document.getElementById('seg');
+  var cells = Array.prototype.slice.call(seg.querySelectorAll('.cell'));
+  var segIdx = 0, segTimer = null;
+  function setSeg(i){
+    segIdx = (i + cells.length) % cells.length;
+    cells.forEach(function(c, k){ c.classList.toggle('on', k === segIdx); });
+  }
+  function startSeg(){
+    clearInterval(segTimer);
+    segTimer = setInterval(function(){ setSeg(segIdx + 1); }, 1300);
+  }
+  cells.forEach(function(c, k){
+    c.addEventListener('click', function(){
+      setSeg(k);
+      startSeg();
+    });
+  });
+  startSeg();
+
+  /* ---------- 06 展开收起 ---------- */
+  var collapse = document.getElementById('collapse');
+  var collapseHead = document.getElementById('collapseHead');
+  var colTimer = null, colHold = false;
+  function startCollapse(){
+    clearInterval(colTimer);
+    colTimer = setInterval(function(){
+      if(colHold) return;
+      collapse.classList.toggle('open');
+    }, 3000);
+  }
+  collapseHead.addEventListener('click', function(){
+    colHold = true;
+    collapse.classList.toggle('open');
+    setTimeout(function(){ colHold = false; }, 4200);
+    startCollapse();
+  });
+  startCollapse();
+
+  /* ---------- 07 周次切换 ---------- */
+  var weekTrack = document.getElementById('weekTrack');
+  var weekOn = false, weekTimer = null, weekHold = false;
+  function startWeek(){
+    clearInterval(weekTimer);
+    weekTimer = setInterval(function(){
+      if(weekHold) return;
+      weekOn = !weekOn;
+      weekTrack.style.transform = weekOn ? 'translateX(-50%)' : 'translateX(0)';
+    }, 3200);
+  }
+  weekTrack.addEventListener('click', function(){
+    weekHold = true;
+    weekOn = !weekOn;
+    weekTrack.style.transform = weekOn ? 'translateX(-50%)' : 'translateX(0)';
+    setTimeout(function(){ weekHold = false; }, 4200);
+    startWeek();
+  });
+  startWeek();
+
+  /* ---------- 08 视图切换 ---------- */
+  var layerGrid = document.getElementById('layerGrid');
+  var layerList = document.getElementById('layerList');
+  var viewOn = true, viewTimer = null, viewHold = false;
+  function setView(gridMode){
+    layerGrid.classList.toggle('hide', !gridMode);
+    layerList.classList.toggle('hide', gridMode);
+  }
+  function startView(){
+    clearInterval(viewTimer);
+    viewTimer = setInterval(function(){
+      if(viewHold) return;
+      viewOn = !viewOn;
+      setView(viewOn);
+    }, 3400);
+  }
+  setView(true);
+  document.querySelector('.view-box').addEventListener('click', function(){
+    viewHold = true;
+    viewOn = !viewOn;
+    setView(viewOn);
+    setTimeout(function(){ viewHold = false; }, 4600);
+    startView();
+  });
+  startView();
+
+  /* ---------- 重播按钮 ---------- */
+  var restarters = {
+    '1': function(){ clearInterval(pressTimer); pressCycle(); startPress(); },
+    '2': function(){ clearInterval(listenTimer); setRec(false); setTimeout(function(){ setRec(true); }, 260); startListen(); },
+    '4': startTr,
+    '5': function(){ setSeg(0); startSeg(); },
+    '6': function(){ collapse.classList.remove('open'); startCollapse(); },
+    '7': function(){ weekOn = false; weekTrack.style.transform = 'translateX(0)'; startWeek(); },
+    '8': function(){ viewOn = true; setView(true); startView(); }
+  };
+  Array.prototype.forEach.call(document.querySelectorAll('.replay'), function(btn){
+    btn.addEventListener('click', function(e){
+      e.stopPropagation();
+      var fn = restarters[btn.getAttribute('data-replay')];
+      if(fn) fn();
+    });
+  });
+})();
+</script>
+</body>
+</html>

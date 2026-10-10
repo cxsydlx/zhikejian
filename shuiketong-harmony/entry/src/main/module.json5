@@ -1,0 +1,104 @@
+{
+  "module": {
+    "name": "entry",
+    "type": "entry",
+    "description": "$string:module_desc",
+    "mainElement": "EntryAbility",
+    "deviceTypes": [
+      "phone",
+      "tablet",
+      "2in1"
+    ],
+    "deliveryWithInstall": true,
+    "installationFree": false,
+    "metadata": [
+      {
+        "name": "ohos.arkui.UIMaterial.state",
+        "value": "enable"
+      }
+    ],
+    "pages": "$profile:main_pages",
+    "requestPermissions": [
+      {
+        "name": "ohos.permission.INTERNET"
+      },
+      {
+        "name": "ohos.permission.MICROPHONE",
+        "reason": "$string:perm_mic",
+        "usedScene": {
+          "when": "inuse",
+          "abilities": [
+            "EntryAbility"
+          ]
+        }
+      },
+      {
+        "name": "ohos.permission.KEEP_BACKGROUND_RUNNING",
+        "reason": "$string:perm_keep_alive",
+        "usedScene": {
+          "when": "always",
+          "abilities": [
+            "EntryAbility"
+          ]
+        }
+      },
+      {
+        // 后台代理提醒：把未来几天的上课提醒排给系统，应用被杀也能准点提醒。
+        // 权限级别 normal / system_grant（**不是 ACL 受限权限**，不会触发"权限声明一致性"拒审）。
+        // 管控在 AGC 侧：需在「项目设置 → 开放能力管理」申请「代理提醒」开放能力
+        // （官方允许场景含"学习类提醒：课程提醒"）；未开通时 publishReminder 失败，代码自动退回进程内通知。
+        "name": "ohos.permission.PUBLISH_AGENT_REMINDER",
+        "reason": "$string:perm_reminder",
+        "usedScene": {
+          "when": "always",
+          "abilities": [
+            "EntryAbility"
+          ]
+        }
+      }
+      // 悬浮窗权限（SYSTEM_FLOAT_WINDOW，ACL 受限）暂时移除以通过 AGC 上架检测；
+      // 恢复方式：① 在 AGC 给发布 Profile 勾选该受限权限；② 把上面这段权限声明加回来即可
+    ],
+    "abilities": [
+      {
+        "name": "EntryAbility",
+        "srcEntry": "./ets/entryability/EntryAbility.ets",
+        "description": "$string:EntryAbility_desc",
+        "icon": "$media:icon",
+        "label": "$string:EntryAbility_label",
+        "startWindowIcon": "$media:startIcon",
+        "startWindowBackground": "$color:start_window_background",
+        "exported": true,
+        // 长时任务类型声明（录音/录屏）。必须在 ability 上声明，
+        // 否则 startBackgroundRunning 报 9800005: The bgMode is invalid.
+        "backgroundModes": [
+          "audioRecording"
+        ],
+        "skills": [
+          {
+            "entities": [
+              "entity.system.home"
+            ],
+            "actions": [
+              "ohos.want.action.home"
+            ]
+          }
+        ]
+      }
+    ],
+    "extensionAbilities": [
+      {
+        "name": "EntryBackupAbility",
+        "srcEntry": "./ets/entrybackupability/EntryBackupAbility.ets",
+        "type": "backup",
+        "exported": false,
+        "metadata": [
+          {
+            "name": "ohos.extension.backup",
+            "resource": "$profile:backup_config"
+          }
+        ]
+      }
+    ]
+  }
+}

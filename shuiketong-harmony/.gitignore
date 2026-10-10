@@ -1,0 +1,17 @@
+/node_modules
+/oh_modules
+/local.properties
+/.idea
+**/build
+/.hvigor
+.cxx
+/.clangd
+/.clang-format
+/.clang-tidy
+**/.test
+/.appanalyzer/.trash
+/.ui-review
+
+# ⛔ 本机签名配置（含桌面绝对路径 + 密文密码），只提交 .template
+build-profile.json5
+build-profile.json5.local

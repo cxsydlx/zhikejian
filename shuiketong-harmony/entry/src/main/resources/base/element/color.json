@@ -1,0 +1,20 @@
+{
+  "color": [
+    {
+      "name": "start_window_background",
+      "value": "#FFFFFF"
+    },
+    {
+      "name": "liquid_header_text",
+      "value": "#2E2F25"
+    },
+    {
+      "name": "liquid_header_sub",
+      "value": "#6B6B62"
+    },
+    {
+      "name": "liquid_header_accent",
+      "value": "#C0492F"
+    }
+  ]
+}

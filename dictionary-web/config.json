@@ -1,0 +1,26 @@
+{
+  "instance_id": "dict-cn-61-01",
+
+  "listen": { "host": "127.0.0.1", "port": 8788 },
+
+  "lexicon": "./lexicon.db",
+  "audio_dir": "./audio",
+
+  "backends": [
+    { "id": "61", "host": "127.0.0.1", "port": 8788, "weight": 1, "enabled": true }
+  ],
+
+  "health": { "interval_sec": 10, "timeout_sec": 3 },
+
+  "warmup": true,
+  "warmup_words": [
+    "hello", "hi", "good", "morning", "afternoon", "evening", "night",
+    "class", "classroom", "teacher", "student", "study", "learn", "lesson",
+    "book", "note", "notes", "read", "write", "word", "words", "dictionary",
+    "test", "exam", "homework", "question", "answer", "knowledge", "school",
+    "university", "college", "course", "grade", "pass", "fail", "degree",
+    "beautiful", "happy", "sad", "angry", "tired", "hungry", "thirsty",
+    "water", "food", "eat", "drink", "sleep", "work", "play", "run", "walk",
+    "important", "difficult", "easy", "hard", "fast", "slow", "big", "small"
+  ]
+}

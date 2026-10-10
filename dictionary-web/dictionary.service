@@ -1,0 +1,25 @@
+[Unit]
+Description=Dictionary backend service (dictionary.xsheep.cn)
+Documentation=https://github.com/globalwordnet/english-wordnet
+After=network.target
+
+[Service]
+Type=simple
+# ⚠️ WorkingDirectory 必须在**数据盘** `/disk/www/dictionary`。
+#    这台机器 `/` 只有 38G（已用 65%，Docker 也在吃），`/disk` 有 196G。
+#    词库 + 音频缓存放数据盘。音频每词两个 WAV 约 30KB，10 万词 ≈ 3GB。
+WorkingDirectory=/disk/www/dictionary
+# ⚠️ ExecStart 里**绝不能出现英文撇号**，否则 systemd 解析出错。
+#    espeak-ng 的工作目录必须是绝对路径且不含撇号 —— app.py 内部会 chdir 到 /tmp。
+ExecStart=/usr/bin/python3 /disk/www/dictionary/app.py --config /disk/www/dictionary/config.json
+Restart=always
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+# 词库是只读的，但 audio/ 缓存需要写
+ReadWritePaths=/disk/www/dictionary/audio /disk/www/dictionary
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

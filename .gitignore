@@ -1,0 +1,59 @@
+# ---------- 鸿蒙构建产物 ----------
+shuiketong-harmony/entry/build/
+shuiketong-harmony/entry/oh_modules/
+shuiketong-harmony/oh_modules/
+shuiketong-harmony/.hvigor/
+shuiketong-harmony/.idea/
+shuiketong-harmony/local.properties
+shuiketong-harmony/**/build/
+shuiketong-harmony/design/_lv/
+shuiketong-harmony/design/_shot/
+shuiketong-harmony/design/_v/
+shuiketong-harmony/design/_d/
+shuiketong-harmony/design/_ill/
+shuiketong-harmony/_build.log
+shuiketong-harmony/_probe.log
+shuiketong-harmony/*.probe.bak
+
+# ---------- ⛔ 签名材料绝不入库 ----------
+# 私钥泄露 = 别人能伪造你的签名包
+*.p12
+*.p7b
+*.cer
+*.key
+*.keystore
+*.jks
+# 本机签名配置（含桌面绝对路径 + DevEco 密文），只提交 .template
+shuiketong-harmony/build-profile.json5
+shuiketong-harmony/build-profile.json5.local
+
+# ---------- 词库与原始数据（可由脚本重新生成） ----------
+dictionary-web/lexicon.db
+dictionary-web/lexicon.db-wal
+dictionary-web/lexicon.db-shm
+dictionary-web/audio/
+dictionary-web/data/*.zip
+dictionary-web/config.dev.json
+# ⚠️ .gitignore 不支持行尾注释（# 会被当成文件名的一部分，规则静默失效）
+#    下面两行的说明必须写在上一行
+dictionary-web/data/*.csv
+dictionary-web/data/*.txt
+
+# ---------- 通用 ----------
+__pycache__/
+*.pyc
+*.log
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# ---------- 华为官方示例项目里的大文件 ----------
+# 实况窗demo 是华为官方 demo（Copyright 2023 Huawei Device Co., Ltd.），
+# 主工程 modules 列表里没有它，属未启用的参考项目。
+# 41MB 的参数映射 xlsx + 11MB 官方截图不进库（代码本身只4.8MB）。
+shuiketong-harmony/实况窗demo/**/*.xlsx
+shuiketong-harmony/实况窗demo/screenshots/
+
+# ---------- 本地备份目录（不进库） ----------
+.bak/
